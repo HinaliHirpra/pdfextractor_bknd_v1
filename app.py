@@ -49,8 +49,7 @@ CORS(app)
 
 # === OpenAI Config ===
 load_dotenv()  # Load variables from .env
-api_key = os.getenv("OPENAI_API_KEY")
-# print(api_key)
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
 MODEL = "gpt-4o"
 MAX_TOKENS_PER_CHUNK = 3000
