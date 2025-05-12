@@ -34,10 +34,10 @@ from deep_translator import GoogleTranslator
 
 # Initialize translator
 # translator = Translator()
-# uri = "mongodb+srv://admin-tool-786:wmqzOaoc5AzeRKiP@cluster0.9jitvus.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+uri = "mongodb+srv://admin-tool-786:wmqzOaoc5AzeRKiP@cluster0.9jitvus.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 # Create a new client and connect to the server
-# client = MongoClient(uri, server_api=ServerApi('1'))
-client = MongoClient("mongodb://localhost:27017/")
+client = MongoClient(uri, server_api=ServerApi('1'))
+# client = MongoClient("mongodb://localhost:27017/")
 # print(client.list_database_names())
 db = client["pdfextractordb"]
 products_collection = db["pdfextractor"]
@@ -50,7 +50,7 @@ CORS(app)
 # === OpenAI Config ===
 load_dotenv()  # Load variables from .env
 api_key = os.getenv("OPENAI_API_KEY")
-print(api_key)
+# print(api_key)
 
 MODEL = "gpt-4o"
 MAX_TOKENS_PER_CHUNK = 3000
