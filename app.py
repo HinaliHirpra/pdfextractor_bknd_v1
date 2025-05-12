@@ -34,7 +34,7 @@ from deep_translator import GoogleTranslator
 
 # Initialize translator
 # translator = Translator()
-uri = "mongodb+srv://admin-tool-786:wmqzOaoc5AzeRKiP@cluster0.9jitvus.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+uri = "mongodb+srv://admin-tool-786:wmqzOaoc5AzeRKiP@cluster0.9jitvus.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0&ssl=true&tls=true"
 # Create a new client and connect to the server
 client = MongoClient(uri, server_api=ServerApi('1'))
 # client = MongoClient("mongodb://localhost:27017/")
