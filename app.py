@@ -242,5 +242,7 @@ def translate_data():
     translated_json_text = re.sub(r"^```(json)?|```$", "", translated_json_text.strip(), flags=re.MULTILINE)
     return translated_json_text
 
-if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=8000)
+# app = Flask(__name__)
+
+# if __name__ == '__main__':
+#     app.run(host="0.0.0.0", port=8000)
