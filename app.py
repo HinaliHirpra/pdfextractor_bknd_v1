@@ -23,20 +23,24 @@ from flask_cors import CORS
 import os
 from dotenv import load_dotenv
 
-from pymongo.mongo_client import MongoClient
+# from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 
 # from flask_cors import CORS
 
-from pymongo import MongoClient
+from pymongo import MongoClient,server_api
 # from googletrans import Translator
 from deep_translator import GoogleTranslator
+import ssl
+# print(ssl.OPENSSL_VERSION)
+
 
 # Initialize translator
 # translator = Translator()
 uri = "mongodb+srv://admin-tool-786:wmqzOaoc5AzeRKiP@cluster0.9jitvus.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0&ssl=true&tls=true"
 # Create a new client and connect to the server
-client = MongoClient(uri, server_api=ServerApi('1'))
+client = MongoClient(uri, server_api=server_api.ServerApi('1'))
+# print(client.server_info())
 # client = MongoClient("mongodb://localhost:27017/")
 # print(client.list_database_names())
 db = client["pdfextractordb"]
