@@ -2,6 +2,8 @@ from flask import Flask, request, jsonify
 import tkinter as tk
 from tkinter import filedialog, messagebox
 import os
+import io
+import base64
 import openai
 import pandas as pd
 import json
@@ -22,6 +24,7 @@ from flask import Flask
 from flask_cors import CORS
 import os
 from dotenv import load_dotenv
+from pdf2image import convert_from_bytes
 
 # from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
@@ -29,61 +32,59 @@ from pymongo.server_api import ServerApi
 # from flask_cors import CORS
 
 from pymongo import MongoClient,server_api
-# from googletrans import Translator
-from deep_translator import GoogleTranslator
-import ssl
-# print(ssl.OPENSSL_VERSION)
-
-
-# Initialize translator
-# translator = Translator()
-uri = "mongodb+srv://admin-tool-786:wmqzOaoc5AzeRKiP@cluster0.9jitvus.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0&ssl=true&tls=true"
-# Create a new client and connect to the server
-client = MongoClient(uri, server_api=server_api.ServerApi('1'))
-# print(client.server_info())
-# client = MongoClient("mongodb://localhost:27017/")
-# print(client.list_database_names())
-db = client["pdfextractordb"]
-products_collection = db["pdfextractor"]
-# print(products_collection)
-
+import cloudinary
+import cloudinary.uploader
 
 app = Flask(__name__)
 CORS(app)
 
-# === OpenAI Config ===
 load_dotenv()  # Load variables from .env
 openai.api_key = os.getenv("OPENAI_API_KEY")
+uri = os.getenv("MongoDB_URI")
+# Create a new client and connect to the server
+client = MongoClient(uri, server_api=server_api.ServerApi('1'))
+
+db = client["pdfextractordb"]
+products_collection = db["pdfextractor"]
+
+cloudinary.config(
+    cloud_name=os.getenv("cloud_name"),
+    api_key=os.getenv("cloud_api_key"),
+    api_secret=os.getenv("cloud_api_secret")
+)
 
 MODEL = "gpt-4o"
 MAX_TOKENS_PER_CHUNK = 3000
 CHUNK_OVERLAP = 100
-# # Example GET endpoint
-# @app.route('/api/hello', methods=['GET'])
-# def hello():
-#     return jsonify({"message": "Hello, world!"})
-
-# Example POST endpoint
-# @app.route('/api/sum', methods=['POST'])
-# def sum_numbers():
-#     data = request.json
-#     result = data.get('a', 0) + data.get('b', 0)
-#     return jsonify({"sum": result})
 
 @app.route('/api/dataextract', methods=['POST'])
 
 def process():
     try:
-        datapath=request.json
-        path=datapath.get('path')
-        text = extract_text_with_ocr(path)
+        if 'pdf_file' not in request.files:
+            return jsonify({"error": "No file part"}), 400
+        url=''
+        file = request.files['pdf_file']
+        file_bytes = file.stream.read()
+        images= convert_from_bytes(file_bytes)
+        images1 = extract_images_from_pdf(file_bytes)
+        for image in images1:
+            if is_product_image(image["buffer"]):
+                url = upload_to_cloudinary(image)
+                # merged_data["url"] = url
+                break
+                # return jsonify({"product_image_url": url})
+        text = extract_text_with_ocr(images)
         chunks = chunk_text(text)
         all_data = [ask_openai(build_prompt(chunk)) for chunk in chunks]
         merged_data = merge_data(all_data)
+      
+        if url:
+            merged_data["url"] = url
         insterdata_flag=products_collection.insert_one(merged_data)
               
         return str(insterdata_flag)
-                # insterdata_flag=insertdata(merged_data)
+                
     except Exception as e:
         # return e
         return jsonify({
@@ -110,24 +111,10 @@ def data_get_by_name():
     json_data = json.loads(json_util.dumps(all_data))
     return json_data
 
-# @app.route('/api/datatranslation', methods=['POST'])
-# # Recursive translation function
-# def translate_value():
-#     data = request.json
-#     translated_data = process_translate_value(data)
-#     return json.dumps(translated_data)
 
-# def process_translate_value(value):
-#     if isinstance(value, str):
-#         return GoogleTranslator(source='auto', target='th').translate(value)
-#     if isinstance(value, list):
-#         return [process_translate_value(item) for item in value]
-#     if isinstance(value, dict):
-#         return {k: process_translate_value(v) for k, v in value.items()}
-#     return value
-
-def extract_text_with_ocr(pdf_path):
-    images = convert_from_path(pdf_path)
+def extract_text_with_ocr(images):
+    # images = convert_from_path(pdf_path)
+    # images = convert_from_bytes(pdf_path.read())
     full_text = ""
     for i, img in enumerate(images):
         text = pytesseract.image_to_string(img, lang="tha+eng")
@@ -209,20 +196,57 @@ def merge_data(chunks_data):
         merged["others"].extend(data.get("others", []))
     return merged
 
-def extract_images_from_pdf(pdf_path, output_folder="extracted_images"):
-    os.makedirs(output_folder, exist_ok=True)
-    doc = fitz.open(pdf_path)
-    image_paths = []
-    for i in range(len(doc)):
-        page = doc[i]
+def extract_images_from_pdf(pdf_bytes):
+    # pdf_bytes = file_stream.read()
+    doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+    images = []
+
+    for page_num in range(len(doc)):
+        page = doc[page_num]
         for img_index, img in enumerate(page.get_images(full=True)):
             xref = img[0]
             base_image = doc.extract_image(xref)
-            image_path = f"{output_folder}/page{i+1}_img{img_index+1}.{base_image['ext']}"
-            with open(image_path, "wb") as f:
-                f.write(base_image["image"])
-            image_paths.append(image_path)
-    return image_paths
+            img_bytes = base_image["image"]
+            ext = base_image["ext"]
+            image = Image.open(io.BytesIO(img_bytes))
+
+            buffer = io.BytesIO()
+            image.save(buffer, format=ext.upper())
+            buffer.seek(0)
+
+            images.append({
+                "name": f"page{page_num+1}_img{img_index+1}.{ext}",
+                "buffer": buffer
+            })
+
+    return images
+
+# === Function: Use OpenAI to check if image is a product ===
+def is_product_image(image_buffer):
+    encoded = base64.b64encode(image_buffer.getvalue()).decode("utf-8")
+    data_url = f"data:image/png;base64,{encoded}"
+
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "user", "content": [
+                    {"type": "text", "text": "This image is from a pdf. Does it show a physical product (like a machine, device, or equipment)? Respond only with: 'product', 'not product', or 'unclear'."},
+                    {"type": "image_url", "image_url": {"url": data_url}}
+                ]}
+            ],
+            max_tokens=10
+        )
+        result = response["choices"][0]["message"]["content"].strip().lower()
+        return result == "product"
+    except Exception as e:
+        print("OpenAI Error:", e)
+        return False
+    
+# === Function: Upload image to Cloudinary ===
+def upload_to_cloudinary(image_data):
+    result = cloudinary.uploader.upload(image_data["buffer"], folder="pdf_product_images/", public_id=image_data["name"])
+    return result["secure_url"]
 
 @app.route('/api/datatranslation', methods=['POST'])
 def translate_data():
