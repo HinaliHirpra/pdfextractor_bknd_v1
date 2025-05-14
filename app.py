@@ -9,7 +9,7 @@ import re
 import tiktoken
 import pytesseract
 from pdf2image import convert_from_path
-from PIL import Image, ImageTk, ImageSequence
+from PIL import Image,ImageSequence
 from openpyxl import Workbook
 from openpyxl.styles import Font, Border, Side
 from openpyxl.drawing.image import Image as ExcelImage
