@@ -21,7 +21,7 @@ COPY . /app
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Expose port (optional: for Flask or FastAPI apps)
-EXPOSE 5000
+EXPOSE 8000
 
 # Run your app (adjust as needed)
 CMD ["python", "app.py"]
