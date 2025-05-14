@@ -1,6 +1,4 @@
 from flask import Flask, request, jsonify
-import tkinter as tk
-from tkinter import filedialog, messagebox
 import os
 import io
 import base64
@@ -16,7 +14,6 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, Border, Side
 from openpyxl.drawing.image import Image as ExcelImage
 import fitz
-from tkinter import ttk
 import threading
 import json
 from bson import json_util
