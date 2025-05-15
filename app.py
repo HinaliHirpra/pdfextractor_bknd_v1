@@ -247,7 +247,8 @@ def upload_to_cloudinary(image_data):
 
 @app.route('/api/datatranslation', methods=['POST'])
 def translate_data():
-    json_data=request.json
+    # json_data=request.json
+    json_data = request.get_json(force=True)
     prompt = f"""Translate all values in the following JSON object from English to Thai, but do not change or translate any keys or structural elements. Keep the JSON format exactly the same. Only translate the string values.
             Here is the JSON:
         {json.dumps(json_data, ensure_ascii=False, indent=2)}
